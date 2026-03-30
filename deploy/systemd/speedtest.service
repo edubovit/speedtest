@@ -1,0 +1,16 @@
+[Unit]
+Description=Network Speed Test
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nobody
+Environment=SERVER_PORT=23080
+ExecStart=/opt/java/jdk-25.0.2/bin/java -Xms32m -Xmx128m -XX:+UseSerialGC -Djava.awt.headless=true -jar /opt/speedtest.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

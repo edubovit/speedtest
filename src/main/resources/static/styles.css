@@ -1,0 +1,321 @@
+:root {
+    color-scheme: dark;
+    --bg: #08111f;
+    --panel: rgba(14, 24, 43, 0.86);
+    --panel-border: rgba(142, 184, 255, 0.18);
+    --text: #eef4ff;
+    --muted: #9fb3d9;
+    --accent: #58a6ff;
+    --accent-2: #43d9ad;
+    --danger: #ff7b7b;
+    --shadow: 0 30px 80px rgba(0, 0, 0, 0.32);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Inter, "Segoe UI", sans-serif;
+    background:
+        radial-gradient(circle at top, rgba(88, 166, 255, 0.16), transparent 35%),
+        linear-gradient(180deg, #08111f 0%, #091421 100%);
+    color: var(--text);
+}
+
+.page {
+    width: min(1080px, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: 2rem 0 3rem;
+}
+
+.grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.gauges {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    margin-bottom: 1rem;
+}
+
+.overview {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    margin: 1rem 0;
+}
+
+.details {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    margin-top: 1rem;
+}
+
+.card {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 20px;
+    padding: 1.25rem;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(10px);
+}
+
+.hero {
+    padding: 1.5rem;
+}
+
+.gauge-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1.25rem 1rem 1.35rem;
+}
+
+.eyebrow {
+    margin: 0 0 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    font-size: 0.85rem;
+}
+
+h1,
+h2,
+p {
+    margin-top: 0;
+}
+
+h1 {
+    margin-bottom: 0.5rem;
+    font-size: clamp(2rem, 4vw, 3rem);
+}
+
+h2 {
+    margin-bottom: 1rem;
+    font-size: 1.05rem;
+}
+
+.subtitle,
+.hint,
+.metric-note,
+dt,
+#updatedAt {
+    color: var(--muted);
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+button {
+    border: 0;
+    border-radius: 999px;
+    padding: 0.85rem 1.5rem;
+    font: inherit;
+    font-weight: 700;
+    color: #08111f;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+button:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+
+.label {
+    margin-bottom: 0.45rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.75rem;
+}
+
+.value {
+    margin-bottom: 0.35rem;
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    font-weight: 800;
+}
+
+.metric-note {
+    min-height: 1.25rem;
+}
+
+.gauge-face {
+    --gauge-start: 195deg;
+    --gauge-sweep: 330deg;
+    --fill-sweep: 0deg;
+    position: relative;
+    width: min(100%, 220px);
+    aspect-ratio: 1;
+    margin-inline: auto;
+    isolation: isolate;
+}
+
+.gauge-face::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+        from var(--gauge-start),
+        #43d9ad 0deg,
+        #8fe96b 140deg,
+        #ffd166 235deg,
+        #ff7b7b var(--gauge-sweep),
+        transparent var(--gauge-sweep),
+        transparent 360deg
+    );
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 18px), #000 calc(100% - 17px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 18px), #000 calc(100% - 17px));
+    box-shadow: 0 0 18px rgba(88, 166, 255, 0.12);
+}
+
+.gauge-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+        from var(--gauge-start),
+        transparent 0deg,
+        transparent var(--fill-sweep),
+        rgba(8, 17, 31, 0.82) var(--fill-sweep),
+        rgba(8, 17, 31, 0.82) var(--gauge-sweep),
+        transparent var(--gauge-sweep),
+        transparent 360deg
+    );
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 18px), #000 calc(100% - 17px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 18px), #000 calc(100% - 17px));
+    z-index: 1;
+}
+
+.gauge-face::after {
+    content: "";
+    position: absolute;
+    inset: 18px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 35%, rgba(19, 34, 58, 0.96), rgba(8, 17, 31, 0.95) 68%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.35);
+    z-index: 2;
+}
+
+.gauge-face.is-unavailable::before {
+    opacity: 0.55;
+}
+
+.gauge-center {
+    position: absolute;
+    inset: 24%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    padding: 0.35rem 0.75rem 0.45rem;
+    z-index: 3;
+}
+
+.gauge-value {
+    margin: 0;
+    font-size: clamp(1.7rem, 4.4vw, 2.7rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.28);
+}
+
+.gauge-detail {
+    margin: 0;
+    min-height: 2.2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 0.84rem;
+    line-height: 1.2;
+    text-align: center;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.24);
+}
+
+.gauge-summary {
+    margin: 0.95rem 0 0;
+    min-height: 2.4em;
+    color: var(--text);
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.progress-card {
+    margin: 1rem 0;
+}
+
+.progress-labels {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.65rem;
+    color: var(--muted);
+}
+
+.progress-track {
+    height: 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.progress-bar {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width 0.2s ease;
+}
+
+.stat-list {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.stat-list div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+}
+
+dd {
+    margin: 0;
+    font-weight: 700;
+}
+
+.error {
+    margin-top: 1rem;
+    color: var(--danger);
+}
+
+@media (max-width: 640px) {
+    .page {
+        width: min(100% - 1rem, 100%);
+        padding-top: 0.75rem;
+    }
+
+    .card {
+        border-radius: 16px;
+    }
+
+    .gauge-face {
+        width: min(100%, 200px);
+    }
+}

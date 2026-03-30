@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Speed Test</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main class="page">
+    <section class="gauges grid" aria-label="Server resource indicators">
+        <article class="gauge-card card">
+            <p class="label">CPU load</p>
+            <div id="cpuGauge" class="gauge-face is-unavailable">
+                <div class="gauge-overlay"></div>
+                <div class="gauge-center">
+                    <p id="cpuValue" class="gauge-value">—</p>
+                    <p id="cpuDetail" class="gauge-detail">Server CPU usage</p>
+                </div>
+            </div>
+            <p id="cpuHint" class="gauge-summary">Waiting for metrics…</p>
+        </article>
+        <article class="gauge-card card">
+            <p class="label">RAM</p>
+            <div id="memoryGauge" class="gauge-face is-unavailable">
+                <div class="gauge-overlay"></div>
+                <div class="gauge-center">
+                    <p id="memoryValue" class="gauge-value">—</p>
+                    <p id="memoryDetail" class="gauge-detail">Used RAM</p>
+                </div>
+            </div>
+            <p id="memoryHint" class="gauge-summary">Waiting for metrics…</p>
+        </article>
+        <article class="gauge-card card">
+            <p class="label">Disk usage</p>
+            <div id="diskGauge" class="gauge-face is-unavailable">
+                <div class="gauge-overlay"></div>
+                <div class="gauge-center">
+                    <p id="diskValue" class="gauge-value">—</p>
+                    <p id="diskDetail" class="gauge-detail">Root filesystem</p>
+                </div>
+            </div>
+            <p id="diskHint" class="gauge-summary">Waiting for metrics…</p>
+        </article>
+    </section>
+
+    <section class="hero card">
+        <p class="eyebrow">net.edubovit.speedtest</p>
+        <h1>Network Speed Test</h1>
+        <p class="subtitle">Measure browser-to-backend HTTP latency, download, and upload throughput in about 30 seconds.</p>
+        <div class="actions">
+            <button id="startButton" type="button">Start test</button>
+            <span id="durationHint" class="hint">Loading test profile…</span>
+        </div>
+        <p id="errorMessage" class="error" hidden></p>
+    </section>
+
+    <section class="overview grid">
+        <article class="metric card">
+            <p class="label">Phase</p>
+            <p id="phaseValue" class="value">Idle</p>
+            <p id="phaseHint" class="metric-note">Ready to run</p>
+        </article>
+        <article class="metric card">
+            <p class="label">Latency</p>
+            <p id="pingValue" class="value">—</p>
+            <p id="pingHint" class="metric-note">Median HTTP RTT</p>
+        </article>
+        <article class="metric card">
+            <p class="label">Download</p>
+            <p id="downloadValue" class="value">—</p>
+            <p id="downloadHint" class="metric-note">Average throughput</p>
+        </article>
+        <article class="metric card">
+            <p class="label">Upload</p>
+            <p id="uploadValue" class="value">—</p>
+            <p id="uploadHint" class="metric-note">Average throughput</p>
+        </article>
+    </section>
+
+    <section class="card progress-card">
+        <div class="progress-labels">
+            <span>Overall progress</span>
+            <span id="progressText">0%</span>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+            <div id="progressBar" class="progress-bar"></div>
+        </div>
+    </section>
+
+    <section class="details grid">
+        <article class="card">
+            <h2>Latency details</h2>
+            <dl class="stat-list">
+                <div><dt>Latest sample</dt><dd id="latestPingSample">—</dd></div>
+                <div><dt>Minimum</dt><dd id="minPingValue">—</dd></div>
+                <div><dt>Jitter</dt><dd id="jitterValue">—</dd></div>
+            </dl>
+        </article>
+        <article class="card">
+            <h2>Transfer details</h2>
+            <dl class="stat-list">
+                <div><dt>Downloaded</dt><dd id="downloadBytes">—</dd></div>
+                <div><dt>Uploaded</dt><dd id="uploadBytes">—</dd></div>
+                <div><dt>Last update</dt><dd id="updatedAt">Never</dd></div>
+            </dl>
+        </article>
+    </section>
+</main>
+<script defer src="/app.js"></script>
+</body>
+</html>
