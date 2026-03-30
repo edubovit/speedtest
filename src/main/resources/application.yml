@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: speedtest
+
+server:
+  port: ${SERVER_PORT:23080}
+  compression:
+    enabled: false
+
+speedtest:
+  ping:
+    warmup-samples: 2
+    measured-samples: 10
+    interval-millis: 250
+  download:
+    duration-seconds: 12
+    buffer-bytes: 262144
+  upload:
+    duration-seconds: 12
+    initial-chunk-bytes: 262144
+    min-chunk-bytes: 262144
+    max-chunk-bytes: 16777216
+    adaptive-target-millis: 750
