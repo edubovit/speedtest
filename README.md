@@ -88,7 +88,7 @@ Example reverse-proxy deployment:
 The included unit file starts the application as:
 
 ```bash
-/opt/java/jdk-25.0.2/bin/java -Xms32m -Xmx128m -XX:+UseSerialGC -Djava.awt.headless=true -jar /opt/speedtest.jar
+/opt/java/jdk-25.0.2/bin/java -Xms32m -Xmx64m -Xss256k -XX:+UseSerialGC -XX:CompressedClassSpaceSize=64m -XX:ReservedCodeCacheSize=64m -Djava.awt.headless=true -jar /opt/speedtest.jar
 ```
 
 It runs under:
