@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=simple
 User=nobody
 Environment=SERVER_PORT=23080
-ExecStart=/opt/java/jdk-25.0.2/bin/java -Xms32m -Xmx64m -Xss256k -XX:+UseSerialGC -XX:CompressedClassSpaceSize=64m -XX:ReservedCodeCacheSize=64m -Djava.awt.headless=true -jar /opt/speedtest.jar
+ExecStart=java -Xms16m -Xmx64m -Xss256k -XX:+UseSerialGC -XX:MaxHeapFreeRatio=50 -XX:MinHeapFreeRatio=10 -XX:-ShrinkHeapInSteps -XX:ActiveProcessorCount=1 -XX:MaxDirectMemorySize=16m -XX:ReservedCodeCacheSize=32m -XX:MaxMetaspaceSize=64m -XX:+UseCompactObjectHeaders -XX:-UsePerfData -XX:TieredStopAtLevel=1 -XX:CICompilerCount=1 -Djava.awt.headless=true -XX:+ExitOnOutOfMemoryError -jar /opt/speedtest.jar
 SuccessExitStatus=143
 Restart=on-failure
 RestartSec=5

@@ -88,7 +88,7 @@ Example reverse-proxy deployment:
 The included unit file starts the application as:
 
 ```bash
-/opt/java/jdk-25.0.2/bin/java -Xms32m -Xmx64m -Xss256k -XX:+UseSerialGC -XX:CompressedClassSpaceSize=64m -XX:ReservedCodeCacheSize=64m -Djava.awt.headless=true -jar /opt/speedtest.jar
+java -Xms16m -Xmx64m -Xss256k -XX:+UseSerialGC -XX:MaxHeapFreeRatio=50 -XX:MinHeapFreeRatio=10 -XX:-ShrinkHeapInSteps -XX:ActiveProcessorCount=1 -XX:MaxDirectMemorySize=16m -XX:ReservedCodeCacheSize=32m -XX:MaxMetaspaceSize=64m -XX:+UseCompactObjectHeaders -XX:-UsePerfData -XX:TieredStopAtLevel=1 -XX:CICompilerCount=1 -Djava.awt.headless=true -XX:+ExitOnOutOfMemoryError -jar /opt/speedtest.jar
 ```
 
 It runs under:
@@ -106,11 +106,7 @@ SERVER_PORT=23080
 Example installation:
 
 1. Copy `build/libs/speedtest.jar` to `/opt/speedtest.jar`.
-2. Install Java 25 so the runtime is available at:
-
-```bash
-/opt/java/jdk-25.0.2/bin/java
-```
+2. Install Java 25 and ensure `java` is available on the service manager's `PATH`.
 
 3. Install the unit:
 
