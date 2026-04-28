@@ -11,6 +11,7 @@ import java.util.Random;
 
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -67,5 +68,29 @@ class SpeedtestApplicationTests {
                         .content(payload))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.receivedBytes").value(payload.length));
+    }
+
+    @Test
+    void staticIndexUsesRelativeAssetPaths() throws Exception {
+        mockMvc.perform(get("/index.html"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("href=\"favicon.svg\"")))
+                .andExpect(content().string(containsString("href=\"styles.css\"")))
+                .andExpect(content().string(containsString("src=\"app.js\"")))
+                .andExpect(content().string(not(containsString("href=\"/favicon.svg\""))))
+                .andExpect(content().string(not(containsString("href=\"/styles.css\""))))
+                .andExpect(content().string(not(containsString("src=\"/app.js\""))));
+    }
+
+    @Test
+    void clientScriptBuildsApiUrlsFromApplicationBase() throws Exception {
+        mockMvc.perform(get("/app.js"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("const APP_BASE_URL = new URL('.', scriptUrl);")))
+                .andExpect(content().string(containsString("appUrl('api/speedtest/config'")))
+                .andExpect(content().string(containsString("appUrl('api/system-metrics'")))
+                .andExpect(content().string(not(containsString("'/api/"))))
+                .andExpect(content().string(not(containsString("\"/api/"))))
+                .andExpect(content().string(not(containsString("`/api/"))));
     }
 }

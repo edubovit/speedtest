@@ -1,6 +1,8 @@
 const BASE_UPLOAD_PART_BYTES = 64 * 1024;
 const GAUGE_SWEEP_DEGREES = 330;
 const SYSTEM_METRICS_REFRESH_MS = 2_000;
+const scriptUrl = document.currentScript && document.currentScript.src ? document.currentScript.src : document.baseURI;
+const APP_BASE_URL = new URL('.', scriptUrl);
 
 const state = {
     config: null,
@@ -53,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadConfig() {
     try {
-        const response = await fetch('/api/speedtest/config?t=' + Date.now(), {cache: 'no-store'});
+        const response = await fetch(appUrl('api/speedtest/config', {t: Date.now()}), {cache: 'no-store'});
         if (!response.ok) {
             throw new Error('Unable to load speed test configuration.');
         }
@@ -114,7 +116,7 @@ function startSystemMetricsPolling() {
 
 async function refreshSystemMetrics(silent = false) {
     try {
-        const response = await fetch(`/api/system-metrics?t=${Date.now()}&r=${Math.random()}`, {
+        const response = await fetch(appUrl('api/system-metrics', {t: Date.now(), r: Math.random()}), {
             cache: 'no-store'
         });
 
@@ -138,7 +140,7 @@ async function runPingPhase(startedAt, totalMs) {
         setPhase('Ping', `Sample ${index + 1} of ${totalSamples}`);
 
         const requestStarted = performance.now();
-        const response = await fetch(`/api/speedtest/ping?t=${Date.now()}&r=${Math.random()}`, {
+        const response = await fetch(appUrl('api/speedtest/ping', {t: Date.now(), r: Math.random()}), {
             cache: 'no-store'
         });
 
@@ -171,7 +173,7 @@ async function runDownloadPhase(startedAt, totalMs) {
     const durationSeconds = state.config.download.durationSeconds;
     setPhase('Download', `Streaming for about ${durationSeconds}s.`);
 
-    const response = await fetch(`/api/speedtest/download?seconds=${durationSeconds}&t=${Date.now()}&r=${Math.random()}`, {
+    const response = await fetch(appUrl('api/speedtest/download', {seconds: durationSeconds, t: Date.now(), r: Math.random()}), {
         cache: 'no-store'
     });
 
@@ -247,7 +249,7 @@ function uploadChunk(chunkSize, onProgress) {
         const xhr = new XMLHttpRequest();
         const payload = buildUploadBlob(chunkSize);
 
-        xhr.open('POST', `/api/speedtest/upload?t=${Date.now()}&r=${Math.random()}`);
+        xhr.open('POST', appUrl('api/speedtest/upload', {t: Date.now(), r: Math.random()}));
         xhr.timeout = 60_000;
         xhr.responseType = 'json';
         xhr.setRequestHeader('Content-Type', 'application/octet-stream');
@@ -271,6 +273,17 @@ function uploadChunk(chunkSize, onProgress) {
         xhr.onabort = () => reject(new Error('Upload request was aborted.'));
         xhr.send(payload);
     });
+}
+
+function appUrl(path, params = {}) {
+    const normalizedPath = path.replace(/^\/+/, '');
+    const url = new URL(normalizedPath, APP_BASE_URL);
+    Object.entries(params).forEach(([name, value]) => {
+        if (value !== undefined && value !== null) {
+            url.searchParams.set(name, String(value));
+        }
+    });
+    return url.href;
 }
 
 function resolveNextChunkSize(uploadedBytes, elapsedMs, fallbackBytes, config) {

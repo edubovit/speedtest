@@ -175,8 +175,8 @@ This is a single Spring Boot process with a static frontend and REST endpoints i
 
 Request/data flow:
 
-1. The browser loads `/index.html`, `/styles.css`, `/app.js`, and `/favicon.svg` from Spring Boot static resources.
-2. `app.js` loads `/api/speedtest/config`, initializes the UI, and starts polling `/api/system-metrics`.
+1. The browser loads `index.html`, `styles.css`, `app.js`, and `favicon.svg` from Spring Boot static resources. Static references are relative so the UI works when published below a path prefix such as `/speedtest/`.
+2. `app.js` derives the application base URL from its own script URL, loads `api/speedtest/config`, initializes the UI, and starts polling `api/system-metrics` relative to that base.
 3. When the user clicks **Start test**, the browser runs ping, download, and upload phases sequentially.
 4. Controllers return minimal responses and streaming bodies; most statistical calculations and UI updates happen client-side.
 5. `SystemMetricsService` samples host metrics at most once per second and returns cached values for more frequent calls.

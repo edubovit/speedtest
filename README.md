@@ -83,6 +83,31 @@ Example reverse-proxy deployment:
 2. Place `deploy/nginx/speedtest.conf` into your nginx site configuration.
 3. Reload nginx.
 
+### Serving below a path prefix
+
+The browser UI uses relative asset and API URLs, so it can also be published below a prefix such as `/speedtest/`. Keep the external URL directory-like with a trailing slash, and configure nginx to either strip the prefix or run Spring Boot with a matching context path.
+
+Prefix-stripping nginx example:
+
+```nginx
+location = /speedtest {
+    return 308 /speedtest/;
+}
+
+location /speedtest/ {
+    proxy_pass http://127.0.0.1:23080/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    gzip off;
+}
+```
+
+The trailing slash on `proxy_pass` is intentional: browser requests for `/speedtest/api/...` are forwarded to the backend as `/api/...`.
+
 ## systemd service example
 
 The included unit file starts the application as:
