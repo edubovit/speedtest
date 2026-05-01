@@ -31,6 +31,14 @@ body {
     padding: 2rem 0 3rem;
 }
 
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
 .grid {
     display: grid;
     gap: 1rem;
@@ -111,7 +119,11 @@ dt,
     align-items: center;
 }
 
-button {
+button,
+.home-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: 0;
     border-radius: 999px;
     padding: 0.85rem 1.5rem;
@@ -120,10 +132,12 @@ button {
     color: #08111f;
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
     cursor: pointer;
+    text-decoration: none;
     transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
-button:hover:not(:disabled) {
+button:hover:not(:disabled),
+.home-button:hover {
     transform: translateY(-1px);
 }
 

@@ -3,9 +3,13 @@ spring:
     name: speedtest
 
 server:
-  port: ${SERVER_PORT:23080}
+  port: ${SERVER_PORT:20003}
   compression:
     enabled: false
+
+home:
+  show: false
+  location: ""
 
 speedtest:
   ping:

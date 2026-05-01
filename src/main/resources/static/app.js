@@ -11,7 +11,9 @@ const state = {
 };
 
 const ui = {
+    topbar: document.getElementById('topbar'),
     startButton: document.getElementById('startButton'),
+    homeLink: document.getElementById('home'),
     durationHint: document.getElementById('durationHint'),
     errorMessage: document.getElementById('errorMessage'),
     phaseValue: document.getElementById('phaseValue'),
@@ -48,10 +50,35 @@ const uploadSeed = createRandomBytes(BASE_UPLOAD_PART_BYTES);
 
 document.addEventListener('DOMContentLoaded', async () => {
     ui.startButton.addEventListener('click', runSpeedTest);
-    await Promise.allSettled([loadConfig(), refreshSystemMetrics()]);
+    await Promise.allSettled([loadConfig(), loadUiConfig(), refreshSystemMetrics()]);
     startSystemMetricsPolling();
     resetView();
 });
+
+async function loadUiConfig() {
+    try {
+        const response = await fetch(appUrl('api/config', {t: Date.now()}), {cache: 'no-store'});
+        if (!response.ok) {
+            throw new Error('Unable to load UI configuration.');
+        }
+
+        const config = await response.json();
+        const home = config && config.home ? config.home : {};
+        if (home.show && home.location) {
+            ui.homeLink.href = home.location;
+            ui.homeLink.hidden = false;
+            ui.topbar.hidden = false;
+        } else {
+            ui.homeLink.hidden = true;
+            ui.topbar.hidden = true;
+            ui.homeLink.removeAttribute('href');
+        }
+    } catch {
+        ui.homeLink.hidden = true;
+        ui.topbar.hidden = true;
+        ui.homeLink.removeAttribute('href');
+    }
+}
 
 async function loadConfig() {
     try {
