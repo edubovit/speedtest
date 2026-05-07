@@ -3,8 +3,8 @@
 Simple browser-to-backend speed test built with:
 
 - Java 25
-- Spring Boot 4.0.5
-- Gradle 9.4.1
+- Spring Boot 4.0.6
+- Gradle 9.5.0
 - plain HTML/CSS/JS
 
 The application measures:
@@ -20,8 +20,8 @@ There is no authentication and no history storage.
 
 - `src/main/java/net/edubovit/speedtest` - Spring Boot backend
 - `src/main/resources/static` - plain web UI served directly by the jar
-- `deploy/nginx/speedtest.conf` - example nginx setup
-- `deploy/systemd/speedtest.service` - example systemd unit
+- `build.gradle` and `settings.gradle` - Gradle Groovy DSL build configuration
+- `speedtest.service` - example systemd unit
 
 ## Run locally
 
@@ -43,11 +43,11 @@ Run it:
 java -jar build/libs/speedtest.jar
 ```
 
-Default port is `23080`.
+Default port is `20003`.
 
 Open:
 
-- `http://localhost:23080/`
+- `http://localhost:20003/`
 
 ## Change the port
 
@@ -70,18 +70,9 @@ Command-line override:
 java -jar build/libs/speedtest.jar --server.port=24080
 ```
 
-## nginx example
+## Reverse proxy notes
 
-The included nginx config assumes:
-
-- Spring Boot runs on `127.0.0.1:23080`
-- nginx reverse-proxies the whole application through a single `/` location
-
-Example reverse-proxy deployment:
-
-1. Start the Spring Boot jar on the backend host.
-2. Place `deploy/nginx/speedtest.conf` into your nginx site configuration.
-3. Reload nginx.
+No nginx configuration is shipped with the project. If you put nginx or another reverse proxy in front of the jar, avoid compression, buffering, request buffering, and caching on the speed-test endpoints so throughput measurements are not distorted.
 
 ### Serving below a path prefix
 
@@ -95,7 +86,7 @@ location = /speedtest {
 }
 
 location /speedtest/ {
-    proxy_pass http://127.0.0.1:23080/;
+    proxy_pass http://127.0.0.1:20003/;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -110,38 +101,33 @@ The trailing slash on `proxy_pass` is intentional: browser requests for `/speedt
 
 ## systemd service example
 
-The included unit file starts the application as:
+The root-level `speedtest.service` unit starts the application as:
 
 ```bash
-java -Xms16m -Xmx64m -Xss256k -XX:+UseSerialGC -XX:MaxHeapFreeRatio=50 -XX:MinHeapFreeRatio=10 -XX:-ShrinkHeapInSteps -XX:ActiveProcessorCount=1 -XX:MaxDirectMemorySize=16m -XX:ReservedCodeCacheSize=32m -XX:MaxMetaspaceSize=64m -XX:+UseCompactObjectHeaders -XX:-UsePerfData -XX:TieredStopAtLevel=1 -XX:CICompilerCount=1 -Djava.awt.headless=true -XX:+ExitOnOutOfMemoryError -jar /opt/speedtest.jar
+java -Xms16m -Xmx64m -Xss256k -XX:+UseSerialGC -XX:MaxHeapFreeRatio=50 -XX:MinHeapFreeRatio=10 -XX:-ShrinkHeapInSteps -XX:ActiveProcessorCount=1 -XX:MaxDirectMemorySize=16m -XX:ReservedCodeCacheSize=32m -XX:MaxMetaspaceSize=64m -XX:+UseCompactObjectHeaders -XX:-UsePerfData -XX:TieredStopAtLevel=1 -XX:CICompilerCount=1 -Djava.awt.headless=true -XX:+ExitOnOutOfMemoryError -jar /opt/speedtest/speedtest.jar
 ```
 
 It runs under:
 
 ```bash
-User=nobody
-```
-
-and sets the default port through:
-
-```bash
-SERVER_PORT=23080
+User=monitoring
 ```
 
 Example installation:
 
-1. Copy `build/libs/speedtest.jar` to `/opt/speedtest.jar`.
+1. Copy `build/libs/speedtest.jar` to `/opt/speedtest/speedtest.jar`.
 2. Install Java 25 and ensure `java` is available on the service manager's `PATH`.
+3. Ensure the `monitoring` user can read the jar, or adjust `User=` in `speedtest.service`.
 
-3. Install the unit:
+4. Install the unit:
 
 ```bash
-sudo cp deploy/systemd/speedtest.service /etc/systemd/system/speedtest.service
+sudo cp speedtest.service /etc/systemd/system/speedtest.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now speedtest
 ```
 
-4. Check status:
+5. Check status:
 
 ```bash
 sudo systemctl status speedtest

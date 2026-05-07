@@ -2,37 +2,50 @@
 
 ## Description
 
-This repository contains `speedtest`, a small Spring Boot application that serves a browser-based network speed test. It measures browser-to-backend HTTP latency, download throughput, upload throughput, and displays live host CPU, RAM, and disk usage on the same dashboard.
+This repository is a small self-hosted browser-to-backend network speed test. It packages a Spring Boot backend and a plain HTML/CSS/JavaScript dashboard into one executable jar named `speedtest.jar`.
 
-The project exists as a self-contained speed test service: the executable jar serves both the backend API and the static HTML/CSS/JavaScript UI. It is intentionally simple and stateless. There is no authentication, user management, database, or history storage; each browser session runs live measurements against the current backend instance.
+The application measures HTTP round-trip latency, single-stream download throughput, and upload throughput between a user's browser and the server that runs the jar. The dashboard also shows live server CPU, RAM, and disk usage indicators. It exists as a lightweight operational utility rather than a multi-user product: there is no authentication, user management, historical storage, database, or background processing.
+
+## Business domain
+
+The bounded context is ad hoc network and host diagnostics. The main actor is a browser user who wants to understand the quality of the HTTP path to this specific backend host and see whether server resource pressure may affect the result.
+
+The repository does not attempt to measure ICMP ping, multi-stream throughput, route-level diagnostics, ISP-grade speed tests, or long-term monitoring. All measurements are immediate, client-driven, and ephemeral.
+
+## Key entities
+
+- **Speed test configuration**: Exposed by `GET /api/speedtest/config` and backed by `SpeedtestProperties`. It contains ping sample counts and interval, download duration, upload duration, adaptive upload chunk sizes, and an estimated total duration.
+- **Ping sample**: A browser-measured HTTP request/response round trip to `GET /api/speedtest/ping`. Warmup samples are discarded; measured samples are summarized as median, minimum, and jitter in the browser.
+- **Download stream**: A timed `application/octet-stream` response from `GET /api/speedtest/download`. The backend repeatedly writes a random byte buffer until the configured or requested duration expires.
+- **Upload chunk**: A browser-generated binary payload posted to `POST /api/speedtest/upload`. The backend drains the request body and returns `UploadResponse(receivedBytes, serverElapsedMillis)`.
+- **System metrics snapshot**: `SystemMetricsResponse` from `GET /api/system-metrics`, containing timestamp, CPU percentage, memory used/total, disk used/total, and disk path. The service caches samples for one second.
+- **UI home configuration**: `UiConfigResponse` from `GET /api/config`, controlled by `home.show` and `home.location`, which optionally displays a Home link in the top bar.
 
 ## Business logic
 
-The application's domain is browser-to-server HTTP measurement, not general network diagnostics. The UI loads a test profile, runs phases in order, and calculates results in the browser:
+The UI workflow is implemented in `src/main/resources/static/app.js`:
 
-- **Configuration phase**: `GET /api/speedtest/config` returns ping sample counts, transfer durations, upload chunk limits, and the estimated total duration.
-- **Ping phase**: the browser sends repeated `GET /api/speedtest/ping` requests. Warmup samples are discarded, and measured samples are summarized as median latency, minimum latency, and jitter. This is HTTP round-trip time, not ICMP ping.
-- **Download phase**: the backend streams random bytes from a reusable buffer for a configured number of seconds. The browser reads the streaming response and computes average Mbps from bytes received and elapsed time.
-- **Upload phase**: the browser uploads generated binary blobs to `POST /api/speedtest/upload`. Chunk size adapts toward a target upload request duration, and the backend drains the request body and reports bytes received plus server elapsed time.
-- **System metrics**: the dashboard polls `GET /api/system-metrics` every two seconds and renders gauges for current CPU, memory, and disk usage when the JVM/platform can provide those values.
+1. Load speed test configuration and optional UI home-link configuration.
+2. Poll server metrics every two seconds.
+3. On `Start test`, run ping, download, then upload phases sequentially.
+4. Render live progress, throughput, byte counts, ping statistics, and final summaries.
 
-The repository is responsible for the single-node web app, static dashboard, measurement endpoints, basic deployment examples, and tests around the HTTP API. It does not provide multi-server selection, persistent result storage, user accounts, public API versioning, or traffic shaping.
+The backend intentionally keeps logic simple and stateless. Speed test endpoints use no-cache headers and add `Timing-Allow-Origin: *` for the speed test API so browser timing information is usable. The download endpoint disables proxy buffering with `X-Accel-Buffering: no` and catches client disconnects as expected behavior. Upload measurement is based on draining the request body; the browser computes displayed throughput from client-side bytes and elapsed time.
 
 ## Tech stack
 
-- **Java 25** via the Gradle Java toolchain.
-- **Spring Boot 4.0.5** with `spring-boot-starter-webmvc` for REST controllers and static resource serving.
-- **Gradle 9.4.1** through the checked-in Gradle wrapper.
-- **Plain HTML/CSS/JavaScript** in `src/main/resources/static`; there is no Node.js package manager, frontend framework, bundler, or separate frontend build.
-- **JUnit 5 / Spring MockMvc** through `spring-boot-starter-webmvc-test` for integration-style controller tests.
-- **JVM/platform management APIs** (`com.sun.management.OperatingSystemMXBean`, `java.nio.file.FileStore`) for optional system metrics.
-- **nginx and systemd examples** under `deploy/` for a reverse-proxy and Linux service deployment.
+- **Java 25** with Gradle toolchains.
+- **Spring Boot 4.0.6** using `spring-boot-starter-webmvc`.
+- **Gradle 9.5.0** via the checked-in wrapper.
+- **JUnit 5 / Spring MockMvc** through `spring-boot-starter-webmvc-test`.
+- **Plain static frontend**: HTML, CSS, and browser JavaScript served from the jar.
+- **Deployment example**: root-level `speedtest.service` systemd unit.
+
+There is no database, message broker, container image, frontend package manager, or generated API client in this repository.
 
 ## Build system
 
-Use the Gradle wrapper from the repository root. The main build file is `build.gradle.kts`.
-
-Common commands:
+Use the Gradle wrapper from the repository root.
 
 ```bash
 ./gradlew test
@@ -48,173 +61,119 @@ On Windows PowerShell:
 java -jar build/libs/speedtest.jar
 ```
 
-Build details:
+`bootJar` produces `build/libs/speedtest.jar`; the plain `jar` task is disabled. The project version is `0.1.0` and the Gradle root project name is `speedtest`.
 
-- `bootJar` produces `build/libs/speedtest.jar`; the archive name is fixed in `build.gradle.kts`.
-- The plain `jar` task is disabled, so the Spring Boot executable jar is the intended artifact.
-- Tests run on JUnit Platform (`tasks.test { useJUnitPlatform() }`).
-- Dependencies resolve from Maven Central.
-- The default application port is `23080`.
-- No CI workflow, Dockerfile, or container compose file is present in this repository.
-
-The test suite was verified with `./gradlew.bat test` in this workspace.
+No CI/CD workflow files were found. Before submitting changes, run `./gradlew test` or `.\gradlew.bat test`; this was verified successfully during this repository exploration.
 
 ## File structure
 
-```text
-.
-├── build.gradle.kts                 # Gradle build, Java 25 toolchain, Spring Boot plugin, dependencies
-├── settings.gradle.kts              # Gradle root project name: speedtest
-├── README.md                        # User-facing overview and run/deploy notes
-├── gradle/wrapper/                  # Gradle wrapper 9.4.1
-├── deploy/
-│   ├── nginx/speedtest.conf         # Example reverse proxy for localhost:23080
-│   └── systemd/speedtest.service    # Example Linux service for /opt/speedtest.jar
-└── src/
-    ├── main/
-    │   ├── java/net/edubovit/speedtest/
-    │   │   ├── SpeedtestApplication.java
-    │   │   ├── api/                 # Response records serialized as JSON
-    │   │   ├── config/              # speedtest.* configuration properties
-    │   │   ├── service/             # System metrics sampling logic
-    │   │   └── web/                 # REST controllers
-    │   └── resources/
-    │       ├── application.yml      # Default Spring and speedtest configuration
-    │       └── static/              # Browser UI served directly by Spring Boot
-    └── test/java/net/edubovit/speedtest/
-        └── SpeedtestApplicationTests.java
-```
-
-Important Java packages:
-
-- `net.edubovit.speedtest.web`: HTTP endpoint definitions. `SpeedtestController` owns measurement endpoints, and `SystemMetricsController` owns dashboard metric polling.
-- `net.edubovit.speedtest.api`: Java records used as JSON response contracts.
-- `net.edubovit.speedtest.config`: `@ConfigurationProperties(prefix = "speedtest")` defaults and accessors.
-- `net.edubovit.speedtest.service`: platform metric sampling and one-second cache.
+- `build.gradle` - Gradle Groovy DSL build definition, Java 25 toolchain, Spring Boot plugin, dependencies, and `speedtest.jar` artifact naming.
+- `settings.gradle` - Gradle root project name.
+- `gradle/wrapper/` and `gradlew*` - pinned Gradle 9.5.0 wrapper.
+- `src/main/java/net/edubovit/speedtest/SpeedtestApplication.java` - Spring Boot entry point and custom `--config` argument expansion.
+- `src/main/java/net/edubovit/speedtest/api/` - response records returned by JSON APIs.
+- `src/main/java/net/edubovit/speedtest/config/` - typed configuration properties for `speedtest.*` and `home.*`.
+- `src/main/java/net/edubovit/speedtest/web/` - REST controllers for speed tests, UI configuration, and system metrics.
+- `src/main/java/net/edubovit/speedtest/service/` - host metrics sampling service.
+- `src/main/resources/application.yml` - default application settings.
+- `src/main/resources/static/` - static web dashboard served directly by Spring Boot.
+- `src/test/java/net/edubovit/speedtest/` - Spring MVC endpoint tests and argument-expansion unit tests.
+- `speedtest.service` - example systemd service unit.
 
 ## API and interfaces
 
-The jar serves the static UI at `/` from `src/main/resources/static/index.html` and exposes these JSON/binary endpoints:
+### Browser UI
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/speedtest/config` | Returns ping/download/upload settings and estimated total duration. |
-| `GET` | `/api/speedtest/ping` | Returns `204 No Content` for HTTP RTT sampling. |
-| `GET` | `/api/speedtest/download?seconds=N` | Streams `application/octet-stream` bytes for the requested duration. Request duration is clamped to 1-60 seconds; default comes from configuration. |
-| `POST` | `/api/speedtest/upload` | Accepts `application/octet-stream`, drains the body, and returns `{"receivedBytes": ..., "serverElapsedMillis": ...}`. |
-| `GET` | `/api/system-metrics` | Returns timestamp, CPU percent, memory used/total, disk used/total, and disk path. Metric fields may be `null` when unavailable. |
+The main user interface is `src/main/resources/static/index.html`, with styling in `styles.css` and behavior in `app.js`. Assets and API URLs are intentionally relative to the script location so the application can be served at `/` or below a prefix such as `/speedtest/`.
 
-Speed test responses set no-cache headers. Speed test endpoints also include `Timing-Allow-Origin: *`, and downloads include `X-Accel-Buffering: no` to help reverse proxies avoid buffering streamed data.
+### HTTP API
 
-The browser UI depends on modern browser APIs:
+- `GET /api/config` returns optional UI home-link configuration.
+- `GET /api/system-metrics` returns a cached host metrics snapshot.
+- `GET /api/speedtest/config` returns test timings and upload chunk limits.
+- `GET /api/speedtest/ping` returns `204 No Content` for HTTP RTT sampling.
+- `GET /api/speedtest/download?seconds=<n>` streams random bytes for a clamped duration from 1 to 60 seconds.
+- `POST /api/speedtest/upload` consumes `application/octet-stream` and returns received byte count and server-side elapsed milliseconds.
 
-- streaming `fetch()` response readers for download measurement;
-- `XMLHttpRequest.upload.onprogress` for upload progress;
-- `crypto.getRandomValues()` and `Blob` for generated upload payloads.
+Reverse proxy guidance should continue to discourage gzip, proxy buffering, request buffering, caching, and prefix mistakes because those can distort throughput measurements. No nginx configuration is shipped with the repository.
 
 ## Configuration
 
-Defaults live in `src/main/resources/application.yml`:
+Default configuration lives in `src/main/resources/application.yml`:
 
-```yaml
-server:
-  port: ${SERVER_PORT:23080}
-  compression:
-    enabled: false
+- `server.port`: currently `20003` in the checked-in application config.
+- `server.compression.enabled`: `false`; compression should stay disabled for speed test accuracy.
+- `home.show` and `home.location`: control whether the UI displays a Home link.
+- `speedtest.ping.*`: warmup samples, measured samples, and interval.
+- `speedtest.download.duration-seconds` and `speedtest.download.buffer-bytes`.
+- `speedtest.upload.duration-seconds`, initial/min/max chunk sizes, and adaptive target duration.
 
-speedtest:
-  ping:
-    warmup-samples: 2
-    measured-samples: 10
-    interval-millis: 250
-  download:
-    duration-seconds: 12
-    buffer-bytes: 262144
-  upload:
-    duration-seconds: 12
-    initial-chunk-bytes: 262144
-    min-chunk-bytes: 262144
-    max-chunk-bytes: 16777216
-    adaptive-target-millis: 750
+Spring Boot property overrides work through environment variables and command-line arguments, for example `SERVER_PORT=24080` or `--server.port=24080`. The application also supports a convenience argument:
+
+```bash
+java -jar build/libs/speedtest.jar --config=/path/to/application.yml
 ```
 
-Operational notes:
+`--config` is expanded by `SpeedtestApplication` to `--spring.config.additional-location=file:<path>`. Missing or blank config paths throw `IllegalArgumentException` before startup.
 
-- Change the port with `SERVER_PORT`, for example `SERVER_PORT=24080 java -jar build/libs/speedtest.jar`, or with Spring's command-line override `--server.port=24080`.
-- `speedtest.*` settings are bound by Spring Boot configuration properties, so they can be overridden through normal Spring configuration sources.
-- HTTP compression is disabled by default because compression would distort transfer measurements.
-- There are no application secrets in the current configuration.
-- Keep reverse proxies from compressing, caching, or buffering the speed test paths. The included nginx example sets `proxy_buffering off`, `proxy_request_buffering off`, and `gzip off`.
+No secrets are required by the current code. If future configuration introduces credentials, do not commit them; use external Spring configuration or environment-specific deployment files.
 
 ## Tests
 
-Run tests from the repository root:
+Run all tests with:
 
 ```bash
 ./gradlew test
 ```
 
-or on Windows:
+The existing suite covers:
 
-```powershell
-.\gradlew.bat test
-```
+- speed test ping/config/upload endpoints with MockMvc;
+- system metrics endpoint shape and no-cache headers;
+- static asset URL conventions needed for prefix deployments;
+- client script API URL construction conventions;
+- `--config` argument expansion and error handling.
 
-Current tests are in `SpeedtestApplicationTests` and start a Spring application context with MockMvc. They cover:
-
-- `GET /api/speedtest/ping` status and cache headers;
-- `GET /api/speedtest/config` default values and estimated duration;
-- `GET /api/system-metrics` status, cache headers, and expected JSON field names;
-- `POST /api/speedtest/upload` byte counting.
-
-Coverage is intentionally narrow. There are no frontend tests, no browser automation tests, no dedicated unit tests for upload chunk adaptation or ping statistics, and no assertion of actual platform metric values because those are environment-dependent. The download streaming endpoint is not directly covered by the current tests.
+There are no dedicated browser automation tests, load tests, nginx/systemd deployment tests, or focused tests for download streaming behavior. Changes to browser throughput calculations should be manually checked in a modern browser because the UI depends on streaming `fetch` and XHR upload progress.
 
 ## Architecture
 
-This is a single Spring Boot process with a static frontend and REST endpoints in the same artifact.
+The application is a single Spring Boot process with static files and JSON/binary endpoints in the same jar.
 
-Request/data flow:
+Controllers form the HTTP boundary:
 
-1. The browser loads `index.html`, `styles.css`, `app.js`, and `favicon.svg` from Spring Boot static resources. Static references are relative so the UI works when published below a path prefix such as `/speedtest/`.
-2. `app.js` derives the application base URL from its own script URL, loads `api/speedtest/config`, initializes the UI, and starts polling `api/system-metrics` relative to that base.
-3. When the user clicks **Start test**, the browser runs ping, download, and upload phases sequentially.
-4. Controllers return minimal responses and streaming bodies; most statistical calculations and UI updates happen client-side.
-5. `SystemMetricsService` samples host metrics at most once per second and returns cached values for more frequent calls.
+- `SpeedtestController` owns speed test configuration, ping, download streaming, and upload draining.
+- `SystemMetricsController` exposes host metrics from `SystemMetricsService`.
+- `UiConfigController` exposes minimal UI configuration.
 
-Backend layering is deliberately thin:
+Configuration is bound with `@ConfigurationProperties` and discovered through `@ConfigurationPropertiesScan` on the application class. API responses use Java records to keep response contracts explicit and immutable.
 
-- `SpeedtestApplication` enables Spring Boot auto-configuration and configuration property scanning.
-- Controllers perform request handling, response header construction, download streaming, and upload body draining.
-- DTO records define the JSON response shape without mapping layers.
-- `SystemMetricsService` encapsulates platform-specific metric sampling and tolerates unavailable metrics by returning `null` values.
+The frontend owns orchestration and presentation. It times HTTP RTT with `performance.now()`, reads the download response stream with `ReadableStreamDefaultReader`, sends upload chunks with `XMLHttpRequest` so upload progress is available, and adapts upload chunk sizes to target roughly 750 ms requests by default.
 
-The app is stateless between requests except for immutable download buffer data in `SpeedtestController` and a short-lived cached metrics sample in `SystemMetricsService`.
+`SystemMetricsService` samples host data using `com.sun.management.OperatingSystemMXBean` when available and Java NIO file-store APIs for disk usage. It synchronizes access and caches one sample for one second to avoid excessive polling overhead.
 
 ## External integrations and dependencies
 
-- **Spring Boot WebMVC**: HTTP server, REST controller model, static resource serving, JSON serialization.
-- **JVM operating system metrics**: host CPU and memory values come from `com.sun.management.OperatingSystemMXBean`; disk values come from `Files.getFileStore(...)` on the detected root path.
-- **nginx**: optional reverse proxy. The example proxies all paths to `127.0.0.1:23080` and disables buffering/compression for measurement accuracy.
-- **systemd**: optional service unit for running `/opt/speedtest.jar` as `User=nobody` with constrained JVM memory/CPU-related options and `SERVER_PORT=23080`.
-- **Modern browsers**: required for streaming download reads and upload progress events.
-
-There are no database, queue, cache server, cloud SDK, or third-party API integrations in the current codebase.
+- **Browser Fetch/XHR APIs**: required for streaming downloads and upload progress.
+- **JDK management APIs**: `com.sun.management.OperatingSystemMXBean` is used when the runtime exposes it; metrics may be `null` on unsupported platforms.
+- **Reverse proxy**: optional; configuration must avoid buffering, request buffering, gzip, caching, and prefix mistakes.
+- **systemd**: optional Linux service manager example at `speedtest.service` for running the jar with constrained JVM memory and CPU options.
+- **Maven Central / Gradle services**: needed to resolve dependencies and the Gradle distribution unless already cached.
 
 ## Conventions
 
-- Keep the project self-contained: backend, static UI, configuration, and deployment examples are all in this repository.
-- Use the Gradle wrapper instead of a system Gradle installation.
-- Keep API response contracts in Java records under `api/` and controller routes under `web/`.
-- Use constructor injection for Spring components, as the existing controllers and services do.
-- Preserve no-cache/no-transform behavior on measurement endpoints. Caching, compression, or buffering can make results misleading.
-- Keep frontend code dependency-free unless there is a strong reason to introduce a frontend build step.
-- When changing measurement behavior, update both the backend configuration/response contract and `static/app.js`, because the browser drives most phase orchestration and calculations.
-- Do not commit Gradle build outputs, IDE metadata, or local wrapper caches; `.gitignore` already excludes `.gradle/`, `build/`, `out/`, IntelliJ files, and Eclipse metadata.
+- Keep API paths relative in the browser code. Tests assert that `app.js` does not hard-code root-relative `/api/...` URLs.
+- Keep speed-test responses non-cacheable and avoid proxy/browser transformations (`no-transform`, gzip off, buffering off).
+- Prefer small immutable API records in `api/` and typed property classes in `config/`.
+- Do not add persistence or authentication assumptions without updating the documentation and tests; the current product model is stateless and unauthenticated.
+- Preserve single-stream semantics unless intentionally changing what the tool measures.
+- Use Gradle wrapper commands rather than a globally installed Gradle.
+- The repository ignores local build output, Gradle state, and common IDE files via `.gitignore`.
 
 ## Unclear areas, risks, technical debt
 
-- **Public exposure risk**: the app has no authentication and exposes bandwidth-consuming download and upload endpoints. That matches the README, but a public deployment should rely on network-level controls, reverse-proxy limits, or other operational protections.
-- **Measurement limitations**: results are based on single HTTP streams per phase and browser-side timing. They are useful for browser-to-this-backend checks, not a full replacement for multi-stream or lower-level network testing.
-- **Limited tests**: backend smoke/integration tests exist, but frontend behavior, download streaming, edge cases, deployment files, and JavaScript calculations are not covered.
-- **Configuration validation is minimal**: `SpeedtestProperties` does not use Bean Validation. Invalid values such as non-positive durations or inconsistent upload chunk limits may lead to confusing runtime behavior.
-- **System metrics are platform-dependent**: CPU/memory/disk values can be unavailable or differ by JVM and OS. The UI handles unavailable metrics, but contributors should avoid assuming all fields are non-null.
+- **Deployment example may be environment-specific**: `speedtest.service` uses `User=monitoring` and `/opt/speedtest/speedtest.jar`; adjust those values for the target host.
+- **No authentication or rate limiting**: exposing the app publicly allows arbitrary users to generate upload/download traffic and view coarse host resource metrics.
+- **Measurement scope is intentionally limited**: results are HTTP, browser, proxy, and single-stream dependent; nginx buffering/compression or intermediary caches can invalidate measurements.
+- **System metrics are best effort**: CPU and memory depend on JDK-specific management APIs; disk path selection uses the working directory root or first filesystem root.
+- **Frontend behavior is mostly untested by automation**: existing tests inspect static files for URL conventions but do not execute the browser workflow.

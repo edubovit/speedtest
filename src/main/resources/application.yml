@@ -3,7 +3,7 @@ spring:
     name: speedtest
 
 server:
-  port: ${SERVER_PORT:20003}
+  port: 20003
   compression:
     enabled: false
 
